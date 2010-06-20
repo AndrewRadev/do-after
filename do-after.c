@@ -1,9 +1,10 @@
-#include <stdio.h>
-#include <string.h>
-#include <scan.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <errno.h>
 #include <alloca.h>
+#include <buffer.h>
+#include <fmt.h>
 
 #ifndef Bool
 #define Bool int
@@ -29,14 +30,16 @@ int new_args_position;
 void usage(const char* prog_name);
 void parse_options(int argc, const char* argv[]);
 unsigned long parse_seconds(const char* time_string);
-int exec_next(int argc, const char* argv[]);
+void exec_next(int argc, const char* argv[]);
 Bool streq(const char* left, const char* right);
+void out(const char* text, unsigned long number);
+void fail(const char* message);
 
 // Debugging {{{1
 
 void print_config() {
-  printf("Seconds: %d\n", config.seconds);
-  printf("Verbose: %d\n", config.verbose);
+  out("Seconds: %", config.seconds);
+  out("Verbose: %", config.verbose);
 }
 
 // Main {{{1
@@ -49,19 +52,22 @@ int main(int argc, const char *argv[]) {
 
   parse_options(argc, argv);
 
+  // Debugging:
   print_config();
 
   do {
     sleep(1);
 
     if (config.verbose >= 2) {
-      printf("Seconds left: %u\n", config.seconds);
+      out("Seconds left: %", config.seconds);
     } else if (config.verbose >= 1 && config.seconds % 60 == 0) {
-      printf("Minutes left: %u\n", config.seconds / 60);
+      out("Minutes left: %", config.seconds / 60);
     }
   } while (config.seconds-- > 0);
 
-  return exec_next(argc - new_args_position, argv + new_args_position);
+  exec_next(argc - new_args_position, argv + new_args_position);
+
+  return 30;
 }
 
 // Function definitions {{{1
@@ -106,7 +112,7 @@ void parse_options(int argc, const char* argv[]) {
  * minutes.
  */
 unsigned long parse_seconds(const char* time_string) {
-  char new_time_string[20]; // should be enough for a number
+  char new_time_string[FMT_ULONG];
   int len = strlen(time_string);
   int mul = 1;
   unsigned long seconds;
@@ -128,7 +134,7 @@ unsigned long parse_seconds(const char* time_string) {
  * Exec the program given after the time string, passing all other parameters
  * along to it.
  */
-int exec_next(int argc, const char* argv[]) {
+void exec_next(int argc, const char* argv[]) {
   char** new_argv = (char**)alloca((argc + 1) * sizeof(char**));
   int i;
   for (i = 0; i < argc; i++) {
@@ -139,7 +145,43 @@ int exec_next(int argc, const char* argv[]) {
   execvp(new_argv[0], new_argv);
 
   // we should only reach this area on error
-  int error_code = errno;
-  perror("Error: execvp() failed\n");
-  return error_code;
+  fail("execvp failed");
+}
+
+/**
+ * Custom output function. Uses a 'number' parameter to interpolate in the
+ * string -- might never be used.
+ * Note: Assumes 'text' size is no more than 1023 characters
+ */
+void out(const char* text, unsigned long number) {
+  int i;
+  int bytes;
+  int status;
+  int l = strlen(text);
+  char new_text[1024]; // will be enough for our purposes
+  char number_string[FMT_ULONG];
+  buffer b = BUFFER_INIT(write, 1, new_text, 1024);
+  for (i = 0; i < l; i++) {
+    if (text[i] == '%') {
+      bytes = fmt_ulong(number_string, number);
+      number_string[bytes] = '\0';
+      status = buffer_put(&b, number_string, strlen(number_string));
+    } else {
+      status = buffer_put(&b, text + i, 1);
+    }
+
+    if (status < 0) { // then there was an error
+      fail("buffer_put failed");
+    }
+  }
+
+  if (buffer_putnlflush(&b) < 0) {
+    fail("buffer_putnlflush failed");
+  }
+}
+
+void fail(const char* message) {
+  int status = errno;
+  perror(message);
+  exit(status);
 }

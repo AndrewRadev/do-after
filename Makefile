@@ -1,12 +1,13 @@
 CC      = gcc
-DIET    = diet
-LDFLAGS = -s -lowfat
-CFLAGS  = -O2
+DIET    = diet -Os
+LDFLAGS = -s
+LIBS	  = -lowfat
+CFLAGS  = -Os
 
 all: do-after
 
 do-after: do-after.o
-	$(DIET) $(CC) -o do-after $(LDFLAGS) do-after.o
+	$(DIET) $(CC) $(LDFLAGS) do-after.o -o do-after $(LIBS)
 
 do-after.o: do-after.c
 	$(CC) $(CFLAGS) -c do-after.c
