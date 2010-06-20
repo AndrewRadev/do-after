@@ -5,6 +5,7 @@
 #include <alloca.h>
 #include <buffer.h>
 #include <fmt.h>
+#include <signal.h>
 
 #ifndef Bool
 #define Bool int
@@ -16,6 +17,8 @@
 #define False 0
 #endif
 
+#define not(x) (x)?False:True
+
 // Globals {{{1
 
 struct config_s {
@@ -24,6 +27,7 @@ struct config_s {
 } config;
 
 int new_args_position;
+Bool is_paused = False;
 
 // Function declarations {{{1
 
@@ -34,6 +38,7 @@ void exec_next(int argc, const char* argv[]);
 Bool streq(const char* left, const char* right);
 void out(const char* text, unsigned long number);
 void fail(const char* message);
+void pause_on_quit(int sig);
 
 // Debugging {{{1
 
@@ -53,10 +58,23 @@ int main(int argc, const char *argv[]) {
   parse_options(argc, argv);
 
   // Debugging:
-  print_config();
+  // print_config();
+
+  // Handle QUIT signal
+  signal(SIGQUIT, pause_on_quit);
 
   do {
     sleep(1);
+
+    // Check if a pause has been set
+    if (is_paused) {
+      out("Seconds left: % (Paused)", config.seconds);
+      while (is_paused) {
+        sleep(1);
+      }
+
+      config.seconds -= 1;
+    }
 
     if (config.verbose >= 2) {
       out("Seconds left: %", config.seconds);
@@ -184,4 +202,12 @@ void fail(const char* message) {
   int status = errno;
   perror(message);
   exit(status);
+}
+
+/**
+ * On receiving a QUIT signal, just pause or unpause the counting
+ */
+void pause_on_quit(int sig) {
+  (void)sig;
+  is_paused = not(is_paused);
 }
