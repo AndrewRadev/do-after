@@ -26,15 +26,13 @@ struct config_s {
   int verbose;
 } config;
 
-int new_args_position;
 Bool is_paused = False;
 
 // Function declarations {{{1
 
 void usage(const char* prog_name);
-void parse_options(int argc, const char* argv[]);
+int parse_options(int argc, char* argv[]);
 unsigned long parse_seconds(const char* time_string);
-void exec_next(int argc, const char* argv[]);
 Bool streq(const char* left, const char* right);
 void out(const char* text, unsigned long number);
 void fail(const char* message);
@@ -49,16 +47,13 @@ void print_config() {
 
 // Main {{{1
 
-int main(int argc, const char *argv[]) {
+int main(int argc, char *argv[]) {
   if (argc < 3) {
     usage(argv[0]);
     return 21;
   }
 
-  parse_options(argc, argv);
-
-  // Debugging:
-  // print_config();
+  int new_args_position = parse_options(argc, argv);
 
   // Handle QUIT signal
   signal(SIGQUIT, pause_on_quit);
@@ -83,9 +78,11 @@ int main(int argc, const char *argv[]) {
     }
   } while (config.seconds-- > 0);
 
-  exec_next(argc - new_args_position, argv + new_args_position);
+  char** new_argv = argv + new_args_position;
+  execvp(new_argv[0], new_argv);
 
-  return 30;
+  // we should only reach this area on error
+  fail("execvp failed");
 }
 
 // Function definitions {{{1
@@ -103,9 +100,9 @@ Bool streq(const char* left, const char* right) {
 
 /**
  * Parse the command-line options and place the results in the global 'config'
- * variable.
+ * variable. Return the position of the next argument after
  */
-void parse_options(int argc, const char* argv[]) {
+int parse_options(int argc, char* argv[]) {
   config.verbose = 0;
   config.seconds = 0;
 
@@ -118,8 +115,7 @@ void parse_options(int argc, const char* argv[]) {
       config.seconds = parse_seconds(argv[i]);
 
       // we don't need to parse anymore
-      new_args_position = i + 1;
-      return;
+      return i + 1;
     }
   }
 }
@@ -146,24 +142,6 @@ unsigned long parse_seconds(const char* time_string) {
   seconds *= mul;
 
   return seconds;
-}
-
-/**
- * Exec the program given after the time string, passing all other parameters
- * along to it.
- */
-void exec_next(int argc, const char* argv[]) {
-  char** new_argv = (char**)alloca((argc + 1) * sizeof(char**));
-  int i;
-  for (i = 0; i < argc; i++) {
-    new_argv[i] = (char*)argv[i];
-  }
-  new_argv[i] = '\0';
-
-  execvp(new_argv[0], new_argv);
-
-  // we should only reach this area on error
-  fail("execvp failed");
 }
 
 /**
