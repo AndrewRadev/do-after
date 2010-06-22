@@ -16,3 +16,7 @@ test: do-after
 	./do-after 3 echo 'test 1'
 	./do-after -v 3 echo 'test 2'
 	./do-after -v -v 3 echo 'test 3'
+
+tgz:
+	tar cvf do-after.tar do-after.c Makefile README
+	gzip do-after.tar
