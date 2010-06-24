@@ -37,6 +37,8 @@ Bool streq(const char* left, const char* right);
 void out(const char* text, unsigned long number);
 void fail(const char* message);
 void pause_on_quit(int sig);
+int catch_negative(int response_code, const char* message);
+int catch_zero(int response_code, const char* message);
 
 // Debugging {{{1
 
@@ -138,7 +140,10 @@ unsigned long parse_seconds(const char* time_string) {
     mul = 60;
   }
 
-  scan_ulong(new_time_string, &seconds);
+  catch_zero(
+      scan_ulong(new_time_string, &seconds),
+      "scan_ulong failed"
+      );
   seconds *= mul;
 
   return seconds;
@@ -156,30 +161,48 @@ void out(const char* text, unsigned long number) {
   int l = strlen(text);
   char new_text[1024]; // will be enough for our purposes
   char number_string[FMT_ULONG];
-  buffer b = BUFFER_INIT(write, 1, new_text, 1024);
   for (i = 0; i < l; i++) {
     if (text[i] == '%') {
-      bytes = fmt_ulong(number_string, number);
+      bytes = catch_zero(fmt_ulong(number_string, number), "fmt_ulong failed");
       number_string[bytes] = '\0';
-      status = buffer_put(&b, number_string, strlen(number_string));
+      status = buffer_put(buffer_1, number_string, strlen(number_string));
     } else {
-      status = buffer_put(&b, text + i, 1);
+      status = buffer_put(buffer_1, text + i, 1);
     }
-
-    if (status < 0) { // then there was an error
-      fail("buffer_put failed");
-    }
+    catch_negative(status, "buffer_put failed");
   }
 
-  if (buffer_putnlflush(&b) < 0) {
-    fail("buffer_putnlflush failed");
-  }
+  catch_negative(buffer_putnlflush(buffer_1), "buffer_putnlflush failed");
 }
 
 void fail(const char* message) {
   int status = errno;
   perror(message);
   exit(status);
+}
+
+/**
+ * Exit the application with an error if the 'response_code' is negative.
+ * Otherwise, return 'response_code'.
+ */
+int catch_negative(int response_code, const char* message) {
+  if (response_code < 0) {
+    fail(message);
+  }
+
+  return response_code;
+}
+
+/**
+ * Exit the application with an error if the 'response_code' is zero.
+ * Otherwise, return 'response_code'.
+ */
+int catch_zero(int response_code, const char* message) {
+  if (response_code == 0) {
+    fail(message);
+  }
+
+  return response_code;
 }
 
 /**
