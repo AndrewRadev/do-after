@@ -18,5 +18,5 @@ test: do-after
 	./do-after -v -v 3 echo 'test 3'
 
 tgz:
-	tar cvf do-after.tar do-after.c Makefile README
+	tar cvf do-after.tar do-after.c Makefile README README.Nikola_Vladov
 	gzip do-after.tar
