@@ -1,5 +1,7 @@
 *.o
 *.tar
 *.tar.gz
+*.html
+*.pdf
 tags
 do-after
