@@ -60,17 +60,18 @@ int main(int argc, char *argv[]) {
   // Handle QUIT signal
   signal(SIGQUIT, pause_on_quit);
 
-  do {
-    sleep(1);
-
+  while (config.seconds > 0) {
     // Check if a pause has been set
     if (is_paused) {
-      out("Seconds left: % (Paused)", config.seconds);
+      if (config.verbose >= 2) {
+        out("Seconds left: % (Paused)", config.seconds);
+      } else {
+        out("Minutes left: % (Paused)", config.seconds / 60);
+      }
+
       while (is_paused) {
         sleep(1);
       }
-
-      config.seconds -= 1;
     }
 
     if (config.verbose >= 2) {
@@ -78,7 +79,10 @@ int main(int argc, char *argv[]) {
     } else if (config.verbose >= 1 && config.seconds % 60 == 0) {
       out("Minutes left: %", config.seconds / 60);
     }
-  } while (config.seconds-- > 0);
+
+    sleep(1);
+    config.seconds--;
+  }
 
   char** new_argv = argv + new_args_position;
   execvp(new_argv[0], new_argv);
