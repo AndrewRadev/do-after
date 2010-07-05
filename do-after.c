@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
       }
 
       while (is_paused) {
-        sleep(1);
+        pause();
       }
     }
 

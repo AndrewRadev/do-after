@@ -5,3 +5,4 @@
 *.pdf
 tags
 do-after
+cscope.*
