@@ -117,6 +117,8 @@ int parse_options(int argc, char* argv[]) {
   for (i = 1; i < argc; i++) {
     if (streq(argv[i], "-v") || streq(argv[i], "--verbose")) {
       config.verbose += 1;
+    } else if (streq(argv[i], "-vv")) {
+      config.verbose += 2;
     } else { // it should be the time parameter
       config.seconds = parse_seconds(argv[i]);
 
@@ -165,6 +167,7 @@ void out(const char* text, unsigned long number) {
   int l = strlen(text);
   char new_text[1024]; // will be enough for our purposes
   char number_string[FMT_ULONG];
+
   for (i = 0; i < l; i++) {
     if (text[i] == '%') {
       bytes = catch_zero(fmt_ulong(number_string, number), "fmt_ulong failed");
@@ -173,6 +176,7 @@ void out(const char* text, unsigned long number) {
     } else {
       status = buffer_put(buffer_1, text + i, 1);
     }
+
     catch_negative(status, "buffer_put failed");
   }
 
