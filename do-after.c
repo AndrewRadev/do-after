@@ -36,7 +36,7 @@ Bool is_paused = False;
 
 // Function declarations {{{1
 
-void usage(const char* prog_name);
+void usage();
 char** parse_options(int argc, char* argv[]);
 unsigned long parse_seconds(const char* time_string);
 Bool streq(const char* left, const char* right);
@@ -59,8 +59,7 @@ void print_config() {
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
-    // not enough arguments
-    usage(argv[0]);
+    fail("Not enough arguments");
     return 21;
   }
 
@@ -112,13 +111,13 @@ int main(int argc, char *argv[]) {
   execvp(new_argv[0], new_argv);
 
   // we should only reach this area on error
-  fail("execvp failed");
+  fail("Could not run program");
 }
 
 // Function definitions {{{1
 
-void usage(const char* prog_name) {
-  perror("Usage: do-after <time> <program> [<program arg1>, [<program arg2>...]]\n");
+void usage() {
+  out("Usage: do-after <time> <program> [<program arg1>, [<program arg2>...]]\n", 0);
 }
 
 /**
@@ -148,9 +147,18 @@ char** parse_options(int argc, char* argv[]) {
       config.seconds = parse_seconds(argv[i]);
 
       // we don't need to parse anymore
-      return argv + (i + 1);
+      if (i + 1 >= argc) {
+        fail("No program given");
+        exit(31);
+      } else {
+        return argv + (i + 1);
+      }
     }
   }
+
+  // if we got here, there was no program and/or time string after flags
+  fail("No time string and no program given");
+  exit(41);
 }
 
 /**
@@ -173,7 +181,7 @@ unsigned long parse_seconds(const char* time_string) {
 
   catch_zero(
       scan_ulong(new_time_string, &seconds),
-      "scan_ulong failed"
+      "Invalid time string given"
       );
   seconds *= mul;
 
@@ -210,6 +218,7 @@ void out(const char* text, unsigned long number) {
 
 void fail(const char* message) {
   int status = errno;
+  usage();
   perror(message);
   exit(status);
 }
