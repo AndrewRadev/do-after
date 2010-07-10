@@ -6,9 +6,12 @@
 #include <buffer.h>
 #include <fmt.h>
 #include <signal.h>
+#include <syslog.h>
+
+// Defines {{{1
 
 #ifndef Bool
-#define Bool int
+#define Bool unsigned short
 #endif
 #ifndef True
 #define True 1
@@ -18,6 +21,9 @@
 #endif
 
 #define not(x) (x)?False:True
+
+#define LOG   0
+#define DEBUG 0
 
 // Globals {{{1
 
@@ -31,7 +37,7 @@ Bool is_paused = False;
 // Function declarations {{{1
 
 void usage(const char* prog_name);
-int parse_options(int argc, char* argv[]);
+char** parse_options(int argc, char* argv[]);
 unsigned long parse_seconds(const char* time_string);
 Bool streq(const char* left, const char* right);
 void out(const char* text, unsigned long number);
@@ -42,23 +48,36 @@ int catch_zero(int response_code, const char* message);
 
 // Debugging {{{1
 
+#if DEBUG
 void print_config() {
   out("Seconds: %", config.seconds);
   out("Verbose: %", config.verbose);
 }
+#endif
 
 // Main {{{1
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
+    // not enough arguments
     usage(argv[0]);
     return 21;
   }
 
-  int new_args_position = parse_options(argc, argv);
+  char** new_argv = parse_options(argc, argv);
+
+#if DEBUG
+  print_config();
+#endif
 
   // Handle QUIT signal
   signal(SIGQUIT, pause_on_quit);
+
+#if LOG
+  // Log start of processing
+  openlog("do-after", LOG_PID, LOG_USER);
+  syslog(LOG_INFO, "Set to finish in `%u` seconds", config.seconds);
+#endif
 
   while (config.seconds > 0) {
     // Check if a pause has been set
@@ -84,7 +103,12 @@ int main(int argc, char *argv[]) {
     config.seconds--;
   }
 
-  char** new_argv = argv + new_args_position;
+#if LOG
+  // Log end of processing
+  syslog(LOG_INFO, "Finished");
+  closelog();
+#endif
+
   execvp(new_argv[0], new_argv);
 
   // we should only reach this area on error
@@ -106,9 +130,10 @@ Bool streq(const char* left, const char* right) {
 
 /**
  * Parse the command-line options and place the results in the global 'config'
- * variable. Return the position of the next argument after
+ * variable. Return the argument list of the program to execute when time runs
+ * out.
  */
-int parse_options(int argc, char* argv[]) {
+char** parse_options(int argc, char* argv[]) {
   config.verbose = 0;
   config.seconds = 0;
 
@@ -123,7 +148,7 @@ int parse_options(int argc, char* argv[]) {
       config.seconds = parse_seconds(argv[i]);
 
       // we don't need to parse anymore
-      return i + 1;
+      return argv + (i + 1);
     }
   }
 }
