@@ -1,7 +1,7 @@
 CC      = gcc
 DIET    = diet -Os
 LDFLAGS = -s
-LIBS	  = -lowfat
+LIBS    = -lowfat
 CFLAGS  = -Os
 
 all: do-after

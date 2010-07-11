@@ -172,7 +172,8 @@ unsigned long parse_seconds(const char* time_string) {
   int mul = 1;
   unsigned long seconds;
 
-  strcpy(new_time_string, time_string);
+  strncpy(new_time_string, time_string, FMT_ULONG);
+  new_time_string[FMT_ULONG - 1] = '\0';
 
   if (new_time_string[len - 1] == 'm') { // then the time's in minutes
     new_time_string[len - 1] = '\0';
