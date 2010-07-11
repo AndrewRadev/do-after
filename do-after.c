@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include <alloca.h>
 #include <buffer.h>
 #include <fmt.h>
 #include <signal.h>
