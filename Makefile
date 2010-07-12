@@ -3,6 +3,7 @@ DIET    = diet -Os
 LDFLAGS = -s
 LIBS    = -lowfat
 CFLAGS  = -Os
+#CFLAGS  = -Os -DDEBUG -DLOG
 
 all: do-after
 

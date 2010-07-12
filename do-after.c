@@ -6,53 +6,28 @@
 #include <fmt.h>
 #include <signal.h>
 #include <syslog.h>
-
-// Defines {{{1
-
-#ifndef Bool
-#define Bool unsigned short
-#endif
-#ifndef True
-#define True 1
-#endif
-#ifndef False
-#define False 0
-#endif
-
-#define not(x) (x)?False:True
-
-#define LOG   0
-#define DEBUG 0
+#include <stdbool.h>
 
 // Globals {{{1
 
-struct config_s {
+struct config {
   unsigned long seconds;
   int verbose;
 } config;
 
-Bool is_paused = False;
+bool is_paused = false;
 
 // Function declarations {{{1
 
 void usage();
 char** parse_options(int argc, char* argv[]);
 unsigned long parse_seconds(const char* time_string);
-Bool streq(const char* left, const char* right);
+bool streq(const char* left, const char* right);
 void out(const char* text, unsigned long number);
 void fail(const char* message);
 void pause_on_quit(int sig);
 int catch_negative(int response_code, const char* message);
 int catch_zero(int response_code, const char* message);
-
-// Debugging {{{1
-
-#if DEBUG
-void print_config() {
-  out("Seconds: %", config.seconds);
-  out("Verbose: %", config.verbose);
-}
-#endif
 
 // Main {{{1
 
@@ -64,14 +39,15 @@ int main(int argc, char *argv[]) {
 
   char** new_argv = parse_options(argc, argv);
 
-#if DEBUG
-  print_config();
+#ifdef DEBUG
+  out("Seconds: %", config.seconds);
+  out("Verbose: %", config.verbose);
 #endif
 
   // Handle QUIT signal
   signal(SIGQUIT, pause_on_quit);
 
-#if LOG
+#ifdef LOG
   // Log start of processing
   openlog("do-after", LOG_PID, LOG_USER);
   syslog(LOG_INFO, "Set to finish in `%u` seconds", config.seconds);
@@ -101,7 +77,7 @@ int main(int argc, char *argv[]) {
     config.seconds--;
   }
 
-#if LOG
+#ifdef LOG
   // Log end of processing
   syslog(LOG_INFO, "Finished");
   closelog();
@@ -120,10 +96,10 @@ void usage() {
 }
 
 /**
- * Return True if strings are the same, False otherwise.
+ * Return true if strings are the same, false otherwise.
  */
-Bool streq(const char* left, const char* right) {
-  return (strcmp(left, right) == 0 ? True : False);
+bool streq(const char* left, const char* right) {
+  return (strcmp(left, right) == 0);
 }
 
 /**
@@ -252,5 +228,5 @@ int catch_zero(int response_code, const char* message) {
  */
 void pause_on_quit(int sig) {
   (void)sig;
-  is_paused = not(is_paused);
+  is_paused = !is_paused;
 }
